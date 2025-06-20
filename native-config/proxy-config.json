@@ -1,0 +1,14 @@
+[
+  {
+    "interfaces":["com.sun.jna.platform.win32.Kernel32"]
+  },
+  {
+    "interfaces":["org.icmp4j.platform.windows.jna.IcmpLibrary"]
+  },
+  {
+    "interfaces":["org.icmp4j.platform.windows.jna.Winsock2Library"]
+  },
+  {
+    "interfaces":["org.xbill.DNS.config.IPHlpAPI"]
+  }
+]
