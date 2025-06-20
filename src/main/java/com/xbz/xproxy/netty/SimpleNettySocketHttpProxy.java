@@ -120,4 +120,9 @@ public class SimpleNettySocketHttpProxy {
         domainIpConvertor.start();
         System.out.println("域名IP检测器已启动！");
     }
+
+    public void stopAll() {
+        interruptProxyServer();
+        domainIpConvertor.stop();
+    }
 }

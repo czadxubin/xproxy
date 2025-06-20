@@ -41,20 +41,6 @@
   "name":"com.sun.jna.win32.DLLCallback"
 },
 {
-  "name":"com.xbz.xproxy.netty.ProxyBackendHandler",
-  "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }]
-},
-{
-  "name":"com.xbz.xproxy.netty.ProxyFrontendHandler",
-  "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }]
-},
-{
-  "name":"com.xbz.xproxy.netty.ProxyFrontendHandler$1"
-},
-{
-  "name":"com.xbz.xproxy.netty.SimpleNettySocketHttpProxy$1"
-},
-{
   "name":"io.netty.bootstrap.ServerBootstrap$1"
 },
 {
@@ -64,10 +50,6 @@
 {
   "name":"io.netty.buffer.AbstractByteBufAllocator",
   "queryAllDeclaredMethods":true
-},
-{
-  "name":"io.netty.buffer.AbstractReferenceCountedByteBuf",
-  "fields":[{"name":"refCnt"}]
 },
 {
   "name":"io.netty.buffer.AdaptivePoolingAllocator$Chunk",
@@ -110,32 +92,12 @@
   "methods":[{"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
-  "name":"io.netty.channel.SimpleChannelInboundHandler",
-  "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
-},
-{
   "name":"io.netty.channel.socket.nio.NioServerSocketChannel",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"io.netty.channel.socket.nio.NioSocketChannel",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"io.netty.util.DefaultAttributeMap",
   "fields":[{"name":"attributes"}]
-},
-{
-  "name":"io.netty.util.Recycler$DefaultHandle",
-  "fields":[{"name":"state"}]
-},
-{
-  "name":"io.netty.util.ReferenceCountUtil",
-  "queryAllDeclaredMethods":true
-},
-{
-  "name":"io.netty.util.ResourceLeakDetector$DefaultResourceLeak",
-  "fields":[{"name":"droppedRecords"}, {"name":"head"}]
 },
 {
   "name":"io.netty.util.concurrent.DefaultPromise",
@@ -175,7 +137,6 @@
 },
 {
   "name":"java.lang.Thread",
-  "fields":[{"name":"threadLocalRandomProbe"}],
   "methods":[{"name":"isVirtual","parameterTypes":[] }]
 },
 {
@@ -220,7 +181,7 @@
 },
 {
   "name":"java.nio.channels.spi.SelectorProvider",
-  "methods":[{"name":"openServerSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }, {"name":"openSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }]
+  "methods":[{"name":"openServerSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }]
 },
 {
   "name":"java.security.SecureRandomParameters"
@@ -235,14 +196,6 @@
 },
 {
   "name":"java.util.concurrent.atomic.AtomicReference",
-  "fields":[{"name":"value"}]
-},
-{
-  "name":"java.util.concurrent.atomic.Striped64",
-  "fields":[{"name":"base"}, {"name":"cellsBusy"}]
-},
-{
-  "name":"java.util.concurrent.atomic.Striped64$Cell",
   "fields":[{"name":"value"}]
 },
 {
@@ -336,9 +289,6 @@
   "allDeclaredFields":true
 },
 {
-  "name":"sun.misc.SharedSecrets"
-},
-{
   "name":"sun.misc.Unsafe",
   "fields":[{"name":"theUnsafe"}],
   "methods":[{"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }, {"name":"getAndAddLong","parameterTypes":["java.lang.Object","long","long"] }, {"name":"getAndSetObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }, {"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
@@ -358,11 +308,5 @@
 {
   "name":"sun.security.provider.SHA2$SHA256",
   "methods":[{"name":"<init>","parameterTypes":[] }]
-},{
-  "name": "com.xbz.xproxy.AppShutdownHook",
-  "allDeclaredConstructors": true,
-  "allPublicConstructors": true,
-  "allDeclaredMethods": true,
-  "allPublicMethods": true
 }
 ]

@@ -11,6 +11,7 @@ import com.xbz.xproxy.util.DNSUtil;
 import com.xbz.xproxy.util.WindowsProxyTool;
 import lombok.SneakyThrows;
 import org.icmp4j.util.TimeUtil;
+import sun.misc.Signal;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,11 +31,15 @@ public class ProxyServerApplication {
      */
     private static final String APP_INVALIDATE = "2025-06-31 23:59:59.999";
     private Thread nettyThread;
-    private SimpleNettySocketHttpProxy httpProxy;
+    private static SimpleNettySocketHttpProxy httpProxy;
+    private static final CountDownLatch latch = new CountDownLatch(1);
 
     public static void main(String[] args) {
-        // 注册关闭钩子
-        Runtime.getRuntime().addShutdownHook(new AppShutdownHook());
+//        // 注册关闭钩子
+//        Runtime.getRuntime().addShutdownHook(new AppShutdownHook());
+        Signal.handle(new Signal("INT"), sig -> shutdown());
+        Signal.handle(new Signal("TERM"), sig -> shutdown());
+
         // 解析输入参数
         Map<String, String> argsMap;
         try {
@@ -53,7 +59,7 @@ public class ProxyServerApplication {
             System.err.println(errMsg);
             return;
         }
-        SimpleNettySocketHttpProxy httpProxy = new SimpleNettySocketHttpProxy(host, port);
+        httpProxy = new SimpleNettySocketHttpProxy(host, port);
         httpProxy.startProxyServer();
 
         while (httpProxy.getStatus() == ProxyServerStatusEnum.PREPARE) {
@@ -104,12 +110,39 @@ public class ProxyServerApplication {
             }
         }
 
+        while (latch.getCount() != 0) {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+            }
+        }
+        System.out.println("----主线程退出！");
+    }
+
+    private static void shutdown() {
+        try {
+            System.out.println("\n===================shutdown===================\n");
+            // 关闭window http代理
+            closeWindowsHttpProxy();
+
+            // 停止代理服务
+            httpProxy.stopAll();
+
+            System.out.println("\n===================shutdown===================\n");
+        } catch (Exception e) {
+
+        } finally {
+            latch.countDown();
+        }
     }
 
     public static void closeWindowsHttpProxy() {
+        if (!ConfigUtil.isWindows()) {
+            return;
+        }
         try {
             WindowsProxyTool.clearProxy();
-            System.err.println("windows系统代理已关闭！");
+            System.out.println("windows系统代理已关闭！");
         } catch (WindowsProxyTool.ProxyOperationException e) {
             System.err.println("windows系统代理关闭异常，请手动关闭！");
         }

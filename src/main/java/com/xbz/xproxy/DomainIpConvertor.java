@@ -81,4 +81,8 @@ public class DomainIpConvertor {
         System.out.println("===========当前域名IP转换服务数据======================");
     }
 
+    public void stop() {
+        System.out.println("探测域名服务停止！");
+        executor.shutdownNow();
+    }
 }
