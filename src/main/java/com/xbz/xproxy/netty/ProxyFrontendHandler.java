@@ -21,6 +21,9 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private volatile boolean isConnectHandled = false;
     private Channel outboundChannel;
+    private String originHost;
+    private String targetHost;
+    private int targetPort;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
@@ -64,11 +67,11 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         String hostPort = matcher.group(1);
         String[] parts = hostPort.split(":");
-        String host = parts[0];
-        int port = parts.length > 1 ? Integer.parseInt(parts[1]) : 443;
+        originHost = parts[0];
+        targetPort = parts.length > 1 ? Integer.parseInt(parts[1]) : 443;
 
         // 处理host,转IP
-        host = convertHostToAvailableIp(host);
+        targetHost = convertHostToAvailableIp(originHost);
 
         // 建立到目标服务器的连接
         Bootstrap b = new Bootstrap();
@@ -81,18 +84,18 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
                     }
                 });
 
-        ChannelFuture f = b.connect(host, port);
-        String finalHost = host;
+        ChannelFuture f = b.connect(targetHost, targetPort);
+        String finalHost = targetHost;
         f.addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
-                System.out.println("隧道[" + finalHost + ":" + port + "]建立成功！\n");
+//                System.out.println("隧道[" + finalHost + ":" + port + "]建立成功！\n");
                 // 响应客户端 CONNECT 成功
                 ctx.writeAndFlush(Unpooled.copiedBuffer(
                         "HTTP/1.1 200 Connection Established\r\n\r\n",
                         StandardCharsets.US_ASCII)).sync();
                 isConnectHandled = true;
             } else {
-                System.err.println("隧道[" + finalHost + ":" + port + "]建立失败！\n" + Throwables.getStackTraceAsString(future.cause()));
+                System.err.println("隧道[" + finalHost + ":" + targetPort + "]建立失败！\n" + Throwables.getStackTraceAsString(future.cause()));
                 ctx.close();
             }
         });
@@ -167,7 +170,9 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         Channel channel = ctx.channel();
         SocketAddress remoteAddress = channel.remoteAddress();
         SocketAddress localAddress = channel.localAddress();
-        System.out.println("lcoal:" + localAddress.toString() + ",remote:" + remoteAddress.toString());
+        System.out.println("local:" + localAddress.toString() + ",remote:" + remoteAddress.toString()
+                + "\n" + "originHost:" + originHost + "\ntargetHost:" + targetHost + "\nargetPort:" + targetPort
+        );
         cause.printStackTrace();
         ctx.close();
     }
