@@ -51,7 +51,7 @@ HTTP代理服务器--主线程接收到中断异常，即将关闭...
 # 下载
 [程序下载链接](https://github.com/czadxubin/xproxy/tags)，欢迎提出宝贵意见!
 
-<font color="#FF4444">**友情提示：测试阶段仅支持win11 64位操作系统**</font>
+<font color="#FF4444">**📌友情提示：测试阶段仅支持win11 64位操作系统**</font>
 
 # 常见问题
 ###  win窗口输出乱码
