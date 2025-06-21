@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"domain", "ip"})
+@EqualsAndHashCode(of = {"domain"})
 public class DomainIP {
     private String domain;
 

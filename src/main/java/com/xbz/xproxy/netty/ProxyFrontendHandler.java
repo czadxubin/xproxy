@@ -12,6 +12,7 @@ import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -163,6 +164,10 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         System.out.println("ProxyFrontend Error");
+        Channel channel = ctx.channel();
+        SocketAddress remoteAddress = channel.remoteAddress();
+        SocketAddress localAddress = channel.localAddress();
+        System.out.println("lcoal:" + localAddress.toString() + ",remote:" + remoteAddress.toString());
         cause.printStackTrace();
         ctx.close();
     }
