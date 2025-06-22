@@ -4,8 +4,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 
-import static org.junit.Assert.*;
-
 public class DNSUtilTest {
 
     @Test
@@ -22,6 +20,6 @@ public class DNSUtilTest {
         ArrayList<String> dnsList = new ArrayList<>();
         dnsList.add(dns2);
         dnsList.add(dns);
-        System.out.println(DNSUtil.domain2IP(dnsList,domain));
+        System.out.println(DNSUtil.domain2IPInfoList(dnsList,domain));
     }
 }

@@ -4,6 +4,7 @@ import cn.hutool.core.net.NetUtil;
 import com.google.common.base.Throwables;
 import com.xbz.xproxy.DomainIpConvertor;
 import com.xbz.xproxy.pojo.DomainIP;
+import com.xbz.xproxy.pojo.DomainIPInfo;
 import com.xbz.xproxy.util.DNSUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -17,13 +18,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.xbz.xproxy.DomainIpConvertor.getDomainIPBy;
+import static com.xbz.xproxy.DomainIpConvertor.getRealAvailableIpInfo;
+
 public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private volatile boolean isConnectHandled = false;
     private Channel outboundChannel;
     private String originHost;
-    private String targetHost;
     private int targetPort;
+    private DomainIPInfo targetIpInfo;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
@@ -69,14 +73,19 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         String[] parts = hostPort.split(":");
         originHost = parts[0];
         targetPort = parts.length > 1 ? Integer.parseInt(parts[1]) : 443;
-
-        // 处理host,转IP
-        targetHost = convertHostToAvailableIp(originHost);
+        // 获取目标访问IP信息
+        targetIpInfo = getRealAvailableIpInfo(getDomainIPBy(originHost));
+        // 得到目标访问host
+        String targetHost = targetIpInfo != null ? targetIpInfo.getIp() : originHost;
 
         // 建立到目标服务器的连接
         Bootstrap b = new Bootstrap();
         b.group(ctx.channel().eventLoop())
                 .channel(NioSocketChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)  // 关键优化：设置5秒连接超时
+                // 不开启keep-alive
+                .option(ChannelOption.SO_KEEPALIVE, false)            // 推荐添加：保持连接活跃
+                .option(ChannelOption.TCP_NODELAY, true)             // 推荐添加：禁用Nagle算法
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
@@ -89,12 +98,20 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         f.addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
 //                System.out.println("隧道[" + finalHost + ":" + port + "]建立成功！\n");
+                // IP信息->重置连接错误次数
+                if (isUseTargetIpInfo()) {
+                    targetIpInfo.increConnectErrTimes();
+                }
                 // 响应客户端 CONNECT 成功
                 ctx.writeAndFlush(Unpooled.copiedBuffer(
                         "HTTP/1.1 200 Connection Established\r\n\r\n",
                         StandardCharsets.US_ASCII)).sync();
                 isConnectHandled = true;
             } else {
+                // IP信息->累计连接错误次数
+                if (isUseTargetIpInfo()) {
+                    targetIpInfo.increConnectErrTimes();
+                }
                 System.err.println("隧道[" + finalHost + ":" + targetPort + "]建立失败！\n" + Throwables.getStackTraceAsString(future.cause()));
                 ctx.close();
             }
@@ -102,43 +119,8 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         outboundChannel = f.channel();
     }
 
-    /**
-     * 域名转IP
-     *
-     * @param host
-     * @return
-     */
-    private String convertHostToAvailableIp(String host) {
-        if (isDomainName(host)) {
-            // 查看域名-IP配置表是否存在对应IP
-            String ip = findByDomainIp(host);
-            if (ip != null) {
-                boolean ping = false;
-                try {
-                    NetUtil.ping(ip, 1000);
-                    ping = true;
-                } catch (Exception e) {
-                    System.err.println(host + "[" + ip + "]无法ping通！继续使用域名访问。");
-                    ping = false;
-                }
-                return ping ? ip : host;
-            }
-        }
-        return host;
-    }
-
-    private String findByDomainIp(String host) {
-//        if(host.equals("github.com")){
-//            return "140.82.116.4";
-////            return "20.27.177.113";
-//        } else if (host.equals("netflix.com")) {
-//            return "207.45.72.1";
-//        }
-        DomainIP domainIP = DomainIpConvertor.getDomainIPBy(host);
-        if (domainIP != null) {
-            return domainIP.getIp();
-        }
-        return null;
+    private boolean isUseTargetIpInfo() {
+        return targetIpInfo != null;
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, ByteBuf in) {
@@ -164,6 +146,7 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         ctx.close();
     }
 
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         System.out.println("ProxyFrontend Error");
@@ -171,7 +154,7 @@ public class ProxyFrontendHandler extends SimpleChannelInboundHandler<ByteBuf> {
         SocketAddress remoteAddress = channel.remoteAddress();
         SocketAddress localAddress = channel.localAddress();
         System.out.println("local:" + localAddress.toString() + ",remote:" + remoteAddress.toString()
-                + "\n" + "originHost:" + originHost + "\ntargetHost:" + targetHost + "\nargetPort:" + targetPort
+                + "\n" + "originHost:" + originHost + "\ntargetIpInfo:" + targetIpInfo + "\nargetPort:" + targetPort
         );
         cause.printStackTrace();
         ctx.close();

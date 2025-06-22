@@ -4,6 +4,7 @@ import cn.hutool.core.date.StopWatch;
 import com.google.common.base.Throwables;
 import com.xbz.xproxy.pojo.AppConfig;
 import com.xbz.xproxy.pojo.DomainIP;
+import com.xbz.xproxy.pojo.DomainIPInfo;
 import com.xbz.xproxy.util.ConfigUtil;
 import com.xbz.xproxy.util.DNSUtil;
 
@@ -51,6 +52,42 @@ public class DomainIpConvertor {
     }
 
     /**
+     * 获取实际可以的IP<br>
+     * 获取规则：<br>
+     * 1. 优先使用被指定为首选的IP，无论是否被标记错误次数
+     * 2. 选择ttl最小的IP，但是需要过滤掉错误次数超过上限的IP
+     * @param domainIP
+     * @return
+     */
+    public static DomainIPInfo getRealAvailableIpInfo(DomainIP domainIP) {
+        if (domainIP == null) {
+            return null;
+        }
+        List<DomainIPInfo> ipList = domainIP.getIpList();
+        if (ipList == null || ipList.isEmpty()) {
+            return null;
+        }
+
+        DomainIPInfo preIpInfo = null;
+        for (DomainIPInfo ipInfo : ipList) {
+            // 优先使用 配置为首选的IP
+            if (ipInfo.isPreferred()) {
+                return ipInfo;
+            }
+            // 判断错误连接次数,超过指定错误次数后，此IP不再被使用
+            if (ipInfo.getConnectErrTimes().get() > 5) {
+                continue;
+            }
+            // 否则优先使用ttl最小的IP
+            if (preIpInfo ==null ||  preIpInfo.getTtl().compareTo(ipInfo.getTtl()) > 0) {
+                // 更换IP
+                preIpInfo = ipInfo;
+            }
+        }
+        return preIpInfo;
+    }
+
+    /**
      * 启动转换器
      */
     public void start() {
@@ -75,11 +112,9 @@ public class DomainIpConvertor {
             AppConfig appConfig = ConfigUtil.getAppConfig();
             List<String> dnsList = appConfig.getDnsList();
             for (String domain : noResolveDomainSet) {
-                List<DomainIP> domainIPs = DNSUtil.domain2IP(dnsList, domain);
-                if (!domainIPs.isEmpty()) {
-                    // 按照ttl排序，取ttl最小
-                    domainIPs.sort(Comparator.comparing(DomainIP::getTtl));
-                    DomainIP domainIP = domainIPs.get(0);
+                DomainIP domainIP = DNSUtil.domain2IP(dnsList, domain);
+                List<DomainIPInfo> ipList = domainIP.getIpList();
+                if (ipList != null && !ipList.isEmpty()) {
                     domainIPMap.put(domain, domainIP);
                     noResolveDomainSet.remove(domain);
                 }
@@ -113,11 +148,9 @@ public class DomainIpConvertor {
                     continue;
                 }
                 //            System.out.println("探测域名[" + domain + "]...开始");
-                List<DomainIP> domainIPs = DNSUtil.domain2IP(dnsList, domain);
-                if (!domainIPs.isEmpty()) {
-                    // 按照ttl排序，取ttl最小
-                    domainIPs.sort(Comparator.comparing(DomainIP::getTtl));
-                    DomainIP domainIP = domainIPs.get(0);
+                DomainIP domainIP = DNSUtil.domain2IP(dnsList, domain);
+                List<DomainIPInfo> ipList = domainIP.getIpList();
+                if (ipList != null && !ipList.isEmpty()) {
                     domainIPMap.put(domain, domainIP);
                 } else {
                     // 未检测到可用IP
@@ -129,7 +162,7 @@ public class DomainIpConvertor {
             stopWatch.stop();
             System.out.println("===========当前域名IP转换服务数据======================");
             domainIPMap.forEach((k, v) -> {
-                System.out.println(k + "|" + v.getIp() + "|" + v.getTtl());
+                System.out.println(v.getPrettyPrint());
             });
             System.out.println("===========当前域名IP转换服务数据======================");
         } catch (Exception e) {
