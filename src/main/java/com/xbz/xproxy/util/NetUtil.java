@@ -2,6 +2,9 @@ package com.xbz.xproxy.util;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 
 public class NetUtil {
     /**
@@ -29,5 +32,44 @@ public class NetUtil {
             // System.out.println("IO异常: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取本地所有IP地址
+     * @param excludeLookupBack 是否排除回环地址（如127.0.0.1）
+     * @param includeIPv6     是否包含IPv6地址
+     * @return 过滤后的IP地址列表
+     * @throws SocketException 当网络接口访问出错时抛出
+     */
+    public static List<String> getAllLocalIPAddresses(
+            boolean excludeLookupBack,
+            boolean includeIPv6) throws SocketException {
+
+        List<String> ipAddresses = new ArrayList<>();
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface iface = interfaces.nextElement();
+
+            // 可选：排除未启用/虚拟接口
+            // if (!iface.isUp() || iface.isVirtual()) continue;
+
+            Enumeration<InetAddress> addresses = iface.getInetAddresses();
+            while (addresses.hasMoreElements()) {
+                InetAddress addr = addresses.nextElement();
+
+                // 过滤条件
+                if (excludeLookupBack && addr.isLoopbackAddress()) {
+                    continue;
+                }
+
+                if (!includeIPv6 && addr.getHostAddress().contains(":")) {
+                    continue; // 排除IPv6地址
+                }
+
+                ipAddresses.add(addr.getHostAddress());
+            }
+        }
+        return ipAddresses;
     }
 }
