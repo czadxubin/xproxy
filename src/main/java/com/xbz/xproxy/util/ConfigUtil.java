@@ -60,6 +60,21 @@ public class ConfigUtil {
         String dnsListVal = appProps.getProperty("dns.list");
         List<String> dnsList = Arrays.stream(dnsListVal.split(",")).collect(Collectors.toCollection(ArrayList::new));
         appConfig.setDnsList(dnsList);
+
+        // 解析固定域名IP
+        HashMap<String, List<String>> fixedDomainIpsMap = new HashMap<>();
+        for (String propertyName : appProps.stringPropertyNames()) {
+            if (propertyName.startsWith("fixed_ip.")) {
+                String domain = propertyName.replaceAll("^fixed_ip\\.", "");
+                Object propValObj = appProps.get(propertyName);
+                if (propValObj != null) {
+                    String propValString = propValObj.toString();
+                    ArrayList<String> ipList = Arrays.stream(propValString.split(",")).collect(Collectors.toCollection(ArrayList::new));
+                    fixedDomainIpsMap.put(domain, ipList);
+                }
+            }
+        }
+        appConfig.setFixedDomainIPsMap(fixedDomainIpsMap);
         return appConfig;
     }
 

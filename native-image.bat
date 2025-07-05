@@ -2,6 +2,8 @@
 @rem java -agentlib:native-image-agent=config-output-dir=native-config  -jar target/xproxy-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 @Rem 加载x64编译环境
+call "E:\win11Software\Microsoft Visual Studio\2022\VC\Auxiliary\Build\vcvarsall.bat" x64
+
 
 @Rem 设置JAVA_HOME
 set JAVA_HOME "E:\Java\graalvm-jdk-21.0.7+8.1"

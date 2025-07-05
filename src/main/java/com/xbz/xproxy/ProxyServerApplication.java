@@ -29,7 +29,7 @@ public class ProxyServerApplication {
     /**
      * 应用过期时间
      */
-    private static final String APP_INVALIDATE = "2025-06-31 23:59:59.999";
+    private static final String APP_INVALIDATE = "2025-07-31 23:59:59.999";
     public static SimpleNettySocketHttpProxy httpProxy;
     private static final CountDownLatch latch = new CountDownLatch(1);
 

@@ -20,6 +20,5 @@ public class DNSUtilTest {
         ArrayList<String> dnsList = new ArrayList<>();
         dnsList.add(dns2);
         dnsList.add(dns);
-        System.out.println(DNSUtil.domain2IPInfoList(dnsList,domain));
     }
 }

@@ -1,6 +1,7 @@
 package com.xbz.xproxy;
 
 import cn.hutool.core.date.StopWatch;
+import cn.hutool.core.lang.hash.Hash;
 import com.google.common.base.Throwables;
 import com.xbz.xproxy.pojo.AppConfig;
 import com.xbz.xproxy.pojo.DomainIP;
@@ -8,11 +9,10 @@ import com.xbz.xproxy.pojo.DomainIPInfo;
 import com.xbz.xproxy.util.ConfigUtil;
 import com.xbz.xproxy.util.DNSUtil;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 域名和IP转换器
@@ -56,6 +56,7 @@ public class DomainIpConvertor {
      * 获取规则：<br>
      * 1. 优先使用被指定为首选的IP，无论是否被标记错误次数
      * 2. 选择ttl最小的IP，但是需要过滤掉错误次数超过上限的IP
+     *
      * @param domainIP
      * @return
      */
@@ -79,7 +80,7 @@ public class DomainIpConvertor {
                 continue;
             }
             // 否则优先使用ttl最小的IP
-            if (preIpInfo ==null ||  preIpInfo.getTtl().compareTo(ipInfo.getTtl()) > 0) {
+            if (preIpInfo == null || preIpInfo.getTtl().compareTo(ipInfo.getTtl()) > 0) {
                 // 更换IP
                 preIpInfo = ipInfo;
             }
@@ -112,7 +113,7 @@ public class DomainIpConvertor {
             AppConfig appConfig = ConfigUtil.getAppConfig();
             List<String> dnsList = appConfig.getDnsList();
             for (String domain : noResolveDomainSet) {
-                DomainIP domainIP = DNSUtil.domain2IP(dnsList, domain);
+                DomainIP domainIP = parseDomainIPInfo(appConfig, dnsList, domain);
                 List<DomainIPInfo> ipList = domainIP.getIpList();
                 if (ipList != null && !ipList.isEmpty()) {
                     domainIPMap.put(domain, domainIP);
@@ -148,7 +149,7 @@ public class DomainIpConvertor {
                     continue;
                 }
                 //            System.out.println("探测域名[" + domain + "]...开始");
-                DomainIP domainIP = DNSUtil.domain2IP(dnsList, domain);
+                DomainIP domainIP = parseDomainIPInfo(appConfig, dnsList, domain);
                 List<DomainIPInfo> ipList = domainIP.getIpList();
                 if (ipList != null && !ipList.isEmpty()) {
                     domainIPMap.put(domain, domainIP);
@@ -164,6 +165,13 @@ public class DomainIpConvertor {
             domainIPMap.forEach((k, v) -> {
                 System.out.println(v.getPrettyPrint());
             });
+            if(!noResolveDomainSet.isEmpty()){
+                System.out.println("-----------未转换成功的域名列表("+noResolveDomainSet.size()+")------------------------");
+                for (String domain : noResolveDomainSet) {
+                    System.out.println(domain);
+                }
+
+            }
             System.out.println("===========当前域名IP转换服务数据======================");
         } catch (Exception e) {
             System.err.println("任务执行异常" + Throwables.getStackTraceAsString(e));
@@ -172,6 +180,45 @@ public class DomainIpConvertor {
                 stopWatch.stop();
             }
             System.out.println(stopWatch.prettyPrint());
+        }
+    }
+
+    public DomainIP parseDomainIPInfo(AppConfig appConfig, List<String> dnsList, String domain) {
+        // 检查是否是用户用户的IP域名
+        Map<String, List<String>> domainIPsMap = appConfig.getFixedDomainIPsMap();
+        List<String> fixedIps = domainIPsMap.get(domain);
+        if (fixedIps != null && !fixedIps.isEmpty()) {
+            HashSet<DomainIPInfo> ipSet = new HashSet<>();
+            List<CompletableFuture<Void>> futures = dnsList.stream().map(dns -> {
+                return CompletableFuture.runAsync(() -> {
+                    try {
+                        for (String ip : fixedIps) {
+                            // 检查IP是否可达
+                            DomainIPInfo ipInfo = DNSUtil.getDomainIPInfo(domain, ip);
+                            if (ipInfo != null) {
+                                ipSet.add(ipInfo);
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }).collect(Collectors.toCollection(ArrayList::new));
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            if (ipSet.isEmpty()) {
+                System.err.printf("警告：域名%s配置IP：%s.已不可用！系统将自动检索可用IP进行使用，请及时更新IP！\n", domain, Arrays.toString(fixedIps.toArray(new String[0])));
+                return DNSUtil.domain2IP(dnsList, domain);
+            } else {
+                DomainIP domainIP = new DomainIP();
+                domainIP.setDomain(domain);
+                for (DomainIPInfo ipInfo : ipSet) {
+                    ipInfo.setPreferred(true);
+                }
+                domainIP.setIpList(new ArrayList<>(ipSet));
+                return domainIP;
+            }
+        } else {
+            return DNSUtil.domain2IP(dnsList, domain);
         }
     }
 
